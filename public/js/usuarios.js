@@ -19,7 +19,7 @@ class UsuariosManager {
             columns: [
                 {data: 'id', name: 'id', width: '10%'},
                 {data: 'apodo', name: 'apodo', width: '35%'},
-                {data: 'rol', name: 'rol', width: '25%'},
+                {data: 'contrasenha', name: 'contrasenha', width: '25%'},
                 {
                     data: 'actions',
                     name: 'actions',
@@ -158,27 +158,6 @@ class UsuariosManager {
                     this.table.ajax.reload(null, false);
                     this.showSuccess('Usuario actualizado exitosamente');
                 }
-            }
-        } catch (error) {
-            this.handleError(error);
-        }
-    }
-
-    async guardarUsuario() {
-        try {
-            const id = $('#usuario_id').val();
-            const formData = new FormData($('#usuarioForm')[0]);
-            
-            const response = await axios({
-                method: id ? 'PUT' : 'POST',
-                url: id ? `/usuarios/${id}` : '/usuarios',
-                data: formData
-            });
-
-            if (response.data.success) {
-                $('#usuarioModal').modal('hide');
-                this.table.ajax.reload(null, false);
-                this.showSuccess('Usuario guardado exitosamente');
             }
         } catch (error) {
             this.handleError(error);

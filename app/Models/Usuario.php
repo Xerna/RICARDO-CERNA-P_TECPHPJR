@@ -10,7 +10,7 @@ class Usuario extends Model
     public $searchable = [
         'id',
         'apodo',
-        'rol'
+        'contrasenha'
     ];
     protected $table = 'usuarios';
     protected $fillable = [
@@ -18,7 +18,5 @@ class Usuario extends Model
         'contrasenha',
         'rol'
     ];
-    protected $hidden = [
-        'contrasenha',
-    ];
+
 }

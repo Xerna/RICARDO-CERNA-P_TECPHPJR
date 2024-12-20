@@ -30,7 +30,7 @@ class UsuarioSeeder extends Seeder
         
         // Usar chunk insert para mejor rendimiento
         $chunkSize = 1000;
-        $numberOfUsers = 10000;
+        $numberOfUsers = 40000;
         
         for ($i = 0; $i < $numberOfUsers; $i += $chunkSize) {
             $users = [];

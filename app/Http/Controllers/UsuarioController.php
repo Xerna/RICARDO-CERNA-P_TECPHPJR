@@ -17,14 +17,14 @@ class UsuarioController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $query = Usuario::select(['id', 'apodo', 'rol']);
+            $query = Usuario::select(['id', 'apodo', 'contrasenha']);
             
             return DataTables::of($query)
                 ->addColumn('actions', function($row){
                     return [
                         'id' => $row->id,
-                        'can_edit' => true, // O usa auth()->user()->can('edit', $row) si tienes policies
-                        'can_delete' => true // O usa auth()->user()->can('delete', $row) si tienes policies
+                        'can_edit' => true, 
+                        'can_delete' => true 
                     ];
                 })
                 ->filterColumn('apodo', function($query, $keyword) {
@@ -36,8 +36,8 @@ class UsuarioController extends Controller
                 ->orderColumn('apodo', function ($query, $order) {
                     $query->orderBy('apodo', $order);
                 })
-                ->orderColumn('rol', function ($query, $order) {
-                    $query->orderBy('rol', $order);
+                ->orderColumn('contrasenha', function ($query, $order) {
+                    $query->orderBy('contrasenha', $order);
                 })
                 ->toJson();
         }
