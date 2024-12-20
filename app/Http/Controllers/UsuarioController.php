@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Usuario;
 use Illuminate\Http\Request;
-
+use Illuminate\Support\Facades\Hash;
 class UsuarioController extends Controller
 {
     /**
@@ -12,11 +12,14 @@ class UsuarioController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function index()
+    public function index(Request $request)
     {
-        $usuarios = Usuarios::all();
-        return view ('usuarios.index', compact('usuarios'));
-
+        if ($request->ajax()) {
+            $usuarios = Usuario::all();
+            return response()->json(['data' => $usuarios]);
+        }
+    
+        return view('usuarios.index');
     }
 
     /**
@@ -37,20 +40,30 @@ class UsuarioController extends Controller
      */
     public function store(Request $request)
     {
-        $request->validate([
-            'apodo' => 'required|unique:usuarios',
-            'contrasenha' => 'required|min:6'
-        ])
-        $usuario = Usuario::create([
-            'apodo' => $request->apodo,
-            'contrasenha' => Hash::make($request->contrasenha),
-            'rol' => 'user'
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'usuario' => $usuario
-        ])
+        try {
+            $request->validate([
+                'apodo' => 'required|unique:usuarios',
+                'contrasenha' => 'required|min:6'
+            ]);
+    
+            $usuario = Usuario::create([
+                'apodo' => $request->apodo,
+                'contrasenha' => Hash::make($request->contrasenha),
+                'rol' => 'user'
+            ]);
+    
+            return response()->json([
+                'success' => true,
+                'message' => 'Usuario creado exitosamente',
+                'usuario' => $usuario
+            ]);
+    
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al crear usuario: ' . $e->getMessage()
+            ], 422);
+        }
     }
 
     /**
@@ -120,6 +133,6 @@ class UsuarioController extends Controller
         $usuario->delete();
         return response()->json([
             'success' => true
-        ])
+        ]);
     }
 }
