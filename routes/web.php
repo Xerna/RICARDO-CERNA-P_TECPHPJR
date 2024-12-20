@@ -13,5 +13,5 @@ use App\Http\Controllers\UsuarioController;
 |
 */
 
-
-Route::resource('usuarios', UsuarioController::class);
+Route::get('/usuarios', [UsuarioController::class, 'index'])->name('usuarios.index');
+Route::resource('usuarios', UsuarioController::class)->except(['index']);

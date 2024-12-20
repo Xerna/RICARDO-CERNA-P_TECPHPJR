@@ -7,6 +7,11 @@ use Illuminate\Database\Eloquent\Model;
 
 class Usuario extends Model
 {
+    public $searchable = [
+        'id',
+        'apodo',
+        'rol'
+    ];
     protected $table = 'usuarios';
     protected $fillable = [
         'apodo',

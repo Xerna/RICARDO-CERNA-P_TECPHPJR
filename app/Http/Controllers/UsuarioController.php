@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Usuario;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use DataTables;
+
 class UsuarioController extends Controller
 {
     /**
@@ -15,10 +17,31 @@ class UsuarioController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $usuarios = Usuario::all();
-            return response()->json(['data' => $usuarios]);
+            $query = Usuario::select(['id', 'apodo', 'rol']);
+            
+            return DataTables::of($query)
+                ->addColumn('actions', function($row){
+                    return [
+                        'id' => $row->id,
+                        'can_edit' => true, // O usa auth()->user()->can('edit', $row) si tienes policies
+                        'can_delete' => true // O usa auth()->user()->can('delete', $row) si tienes policies
+                    ];
+                })
+                ->filterColumn('apodo', function($query, $keyword) {
+                    $query->where('apodo', 'like', "%{$keyword}%");
+                })
+                ->orderColumn('id', function ($query, $order) {
+                    $query->orderBy('id', $order);
+                })
+                ->orderColumn('apodo', function ($query, $order) {
+                    $query->orderBy('apodo', $order);
+                })
+                ->orderColumn('rol', function ($query, $order) {
+                    $query->orderBy('rol', $order);
+                })
+                ->toJson();
         }
-    
+        
         return view('usuarios.index');
     }
 
@@ -83,9 +106,16 @@ class UsuarioController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function edit($id)
+    public function edit(Usuario $usuario)
     {
-        //
+        try {
+            return response()->json($usuario);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener usuario: ' . $e->getMessage()
+            ], 422);
+        }
     }
 
     /**
@@ -95,26 +125,34 @@ class UsuarioController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, $id)
+    public function update(Request $request, Usuario $usuario)
     {
-        $request->validate([
-            'apodo' => 'required|unique:usuarios,apodo,' . $usuario->id,
-            'contrasenha' => 'nullable|min:6'
-        ]);
-
-        $data = ['apodo' => $request->apodo];
-
-        if($request->filled('contrasenha')){
-            $data['contrasenha'] = Hash::make($request->contrasenha);
+        try {
+            $request->validate([
+                'apodo' => 'required|unique:usuarios,apodo,' . $usuario->id,
+                'contrasenha' => 'nullable|min:6'
+            ]);
+    
+            $data = ['apodo' => $request->apodo];
+    
+            if($request->filled('contrasenha')){
+                $data['contrasenha'] = Hash::make($request->contrasenha);
+            }
+    
+            $usuario->update($data);
+    
+            return response()->json([
+                'success' => true,
+                'message' => 'Usuario actualizado exitosamente',
+                'usuario' => $usuario
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al actualizar usuario: ' . $e->getMessage()
+            ], 422);
         }
-
-        $usuario->update($data);
-
-        return response()->json([
-            'sucesss' => true,
-            'usuario' => $usuario
-        ]);
-    }
+    }   
 
     /**
      * Remove the specified resource from storage.
@@ -124,15 +162,19 @@ class UsuarioController extends Controller
      */
     public function destroy(Request $request, Usuario $usuario)
     {
-        if(!Hash::check($request->password_confirmation, auth()->user()->contrasenha)){
+        try {
+            $usuario->delete();
+            
             return response()->json([
-                'sucess' => false,
-                'message' => 'Contraseña incorrecta'
-            ], '403');
+                'success' => true,
+                'message' => 'Usuario eliminado correctamente'
+            ]);
+    
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al eliminar usuario: ' . $e->getMessage()
+            ], 500);
         }
-        $usuario->delete();
-        return response()->json([
-            'success' => true
-        ]);
     }
 }
