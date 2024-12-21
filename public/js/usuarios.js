@@ -1,20 +1,39 @@
+/**
+ * Clase para gestionar la tabla de usuarios y sus operaciones CRUD
+ */
 class UsuariosManager {
+    /**
+     * Constructor de la clase
+     * Inicializa la tabla y los eventos
+     */
     constructor() {
+        // Configuración inicial
         this.routes = window.Routes.usuarios;
-        this.table = null;
-        this.initializeDataTable();
-        this.initializeEventListeners();
+        this.tabla = null;
+        
+        // Selectores del DOM
+        this.selectores = {
+            tabla: '#usuarios-table',
+            botonNuevo: '#nuevo-usuario-btn'
+        };
+
+        // Inicialización
+        this.inicializarTabla();
+        this.inicializarEventos();
     }
 
-    initializeDataTable() {
-        this.table = $('#usuarios-table').DataTable({
+    /**
+     * Inicializa la tabla de usuarios con DataTables
+     */
+    inicializarTabla() {
+        const configuracionTabla = {
             processing: true,
             serverSide: true,
             pageLength: 10,
             ajax: {
                 url: this.routes.index,
                 type: 'GET',
-                error: this.handleAjaxError.bind(this)
+                error: (xhr, error, thrown) => this.manejarErrorAjax(xhr, error, thrown)
             },
             columns: [
                 {data: 'id', name: 'id', width: '10%'},
@@ -26,147 +45,160 @@ class UsuariosManager {
                     orderable: false,
                     searchable: false,
                     width: '30%',
-                    render: this.renderActions.bind(this)
+                    render: (data) => this.renderizarBotones(data)
                 }
             ],
             order: [[0, 'desc']],
             language: {
-                processing: "Procesando...",
-                search: "Buscar:",
-                lengthMenu: "Mostrar _MENU_ registros",
-                info: "Mostrando registros del _START_ al _END_ de un total de _TOTAL_ registros",
-                infoEmpty: "Mostrando registros del 0 al 0 de un total de 0 registros",
-                infoFiltered: "(filtrado de un total de _MAX_ registros)",
-                loadingRecords: "Cargando...",
-                zeroRecords: "No se encontraron resultados",
-                emptyTable: "Ningún dato disponible en esta tabla",
-                paginate: {
-                    first: "Primero",
-                    last: "Último",
-                    next: "Siguiente",
-                    previous: "Anterior"
-                },
-                aria: {
-                    sortAscending: ": Activar para ordenar la columna de manera ascendente",
-                    sortDescending: ": Activar para ordenar la columna de manera descendente"
-                }
+                url: 'https://cdn.datatables.net/plug-ins/1.10.24/i18n/Spanish.json'
             },
-            deferRender: true,
             scrollY: '50vh',
             scroller: true,
             scrollCollapse: true
-        });
+        };
+
+        this.tabla = $(this.selectores.tabla).DataTable(configuracionTabla);
     }
 
-    renderActions(data) {
-        const buttons = [];
+    /**
+     * Renderiza los botones de acción para cada fila
+     */
+    renderizarBotones(data) {
+        const botones = [];
         
         if (data.can_edit) {
-            buttons.push(`
-                <button class="btn btn-sm btn-info edit-usuario" 
-                        data-id="${data.id}">
-                    Editar
-                </button>
-            `);
+            botones.push(this.crearBoton('edit', data.id, 'info', 'Editar'));
         }
         
         if (data.can_delete) {
-            buttons.push(`
-                <button class="btn btn-sm btn-danger delete-usuario" 
-                        data-id="${data.id}">
-                    Eliminar
-                </button>
-            `);
+            botones.push(this.crearBoton('delete', data.id, 'danger', 'Eliminar'));
         }
         
-        return `<div class="btn-group">${buttons.join('')}</div>`;
+        return `<div class="btn-group">${botones.join('')}</div>`;
     }
 
-    initializeEventListeners() {
-        $('#nuevo-usuario-btn').on('click', () => this.crearUsuario());
+    /**
+     * Crea un botón HTML con los parámetros especificados
+     */
+    crearBoton(accion, id, tipo, texto) {
+        return `
+            <button class="btn btn-sm btn-${tipo} ${accion}-usuario" 
+                    data-id="${id}">
+                ${texto}
+            </button>
+        `;
+    }
+
+    /**
+     * Inicializa los eventos de la tabla
+     */
+    inicializarEventos() {
+        $(this.selectores.botonNuevo).on('click', () => this.crearUsuario());
         
-        $('#usuarios-table').on('click', '.edit-usuario', (e) => {
+        $(this.selectores.tabla).on('click', '.edit-usuario', (e) => {
             const id = $(e.currentTarget).data('id');
             this.editarUsuario(id);
         });
         
-        $('#usuarios-table').on('click', '.delete-usuario', (e) => {
+        $(this.selectores.tabla).on('click', '.delete-usuario', (e) => {
             const id = $(e.currentTarget).data('id');
             this.eliminarUsuario(id);
         });
     }
 
+    /**
+     * Muestra el formulario para crear un nuevo usuario
+     */
     async crearUsuario() {
-        const { value: formValues } = await Swal.fire({
-            title: 'Nuevo Usuario',
-            html:
-                '<input id="swal-apodo" class="swal2-input" placeholder="Apodo">' +
-                '<input id="swal-contrasenha" type="password" class="swal2-input" placeholder="Contraseña">',
-            focusConfirm: false,
-            showCancelButton: true,
-            confirmButtonText: 'Guardar',
-            cancelButtonText: 'Cancelar',
-            preConfirm: () => {
-                return {
-                    apodo: document.getElementById('swal-apodo').value,
-                    contrasenha: document.getElementById('swal-contrasenha').value
-                }
-            }
-        });
-        if (formValues) {
-            try {
-                const response = await axios.post(this.routes.store, formValues);
-                
-                if (response.data.success) {
-                    this.table.ajax.reload(null, false);
-                    this.showSuccess('Usuario creado exitosamente');
-                }
-            } catch (error) {
-                this.handleError(error);
-            }
-        }
-    }
+        const formulario = await this.mostrarFormulario('Nuevo Usuario');
+        
+        if (!formulario) return;
 
-     async editarUsuario(id) {
         try {
-            const url = this.routes.edit.replace(':id', id);
-            const response = await axios.get(url);
-            const usuario = response.data;
-
-            const { value: formValues } = await Swal.fire({
-                title: 'Editar Usuario',
-                html:
-                    `<input id="swal-apodo" class="swal2-input" value="${usuario.apodo}" placeholder="Apodo">` +
-                    '<input id="swal-contrasenha" type="password" class="swal2-input" placeholder="Nueva Contraseña (opcional)">',
-                focusConfirm: false,
-                showCancelButton: true,
-                confirmButtonText: 'Actualizar',
-                cancelButtonText: 'Cancelar',
-                preConfirm: () => {
-                    return {
-                        apodo: document.getElementById('swal-apodo').value,
-                        contrasenha: document.getElementById('swal-contrasenha').value
-                    }
-                }
-            });
-
-            if (formValues) {
-                const updateUrl = this.routes.update.replace(':id', id);
-                const updateResponse = await axios.put(updateUrl, formValues);
-                
-                if (updateResponse.data.success) {
-                    this.table.ajax.reload(null, false);
-                    this.showSuccess('Usuario actualizado exitosamente');
-                }
+            const respuesta = await axios.post(this.routes.store, formulario);
+            
+            if (respuesta.data.success) {
+                this.actualizarTabla();
+                this.mostrarMensajeExito('Usuario creado exitosamente');
             }
         } catch (error) {
-            this.handleError(error);
+            this.manejarError(error);
         }
     }
 
+    /**
+     * Muestra el formulario para editar un usuario
+     */
+    async editarUsuario(id) {
+        try {
+            const respuesta = await axios.get(this.routes.edit.replace(':id', id));
+            const usuario = respuesta.data;
+
+            const formulario = await this.mostrarFormulario('Editar Usuario', usuario);
+            
+            if (!formulario) return;
+
+            const respuestaUpdate = await axios.put(
+                this.routes.update.replace(':id', id), 
+                formulario
+            );
+            
+            if (respuestaUpdate.data.success) {
+                this.actualizarTabla();
+                this.mostrarMensajeExito('Usuario actualizado exitosamente');
+            }
+        } catch (error) {
+            this.manejarError(error);
+        }
+    }
+
+    /**
+     * Muestra el formulario de usuario (crear/editar)
+     */
+    async mostrarFormulario(titulo, usuario = null) {
+        const { value: formulario } = await Swal.fire({
+            title: titulo,
+            html: `
+                <input id="swal-apodo" 
+                       class="swal2-input" 
+                       placeholder="Apodo" 
+                       value="${usuario?.apodo || ''}">
+                <input id="swal-contrasenha" 
+                       type="password" 
+                       class="swal2-input" 
+                       placeholder="${usuario ? 'Nueva Contraseña (opcional)' : 'Contraseña'}">
+            `,
+            focusConfirm: false,
+            showCancelButton: true,
+            confirmButtonText: usuario ? 'Actualizar' : 'Guardar',
+            cancelButtonText: 'Cancelar',
+            preConfirm: () => {
+                const apodo = document.getElementById('swal-apodo').value;
+                const contrasenha = document.getElementById('swal-contrasenha').value;
+
+                if (!apodo) {
+                    Swal.showValidationMessage('El apodo es requerido');
+                    return false;
+                }
+
+                if (!usuario && !contrasenha) {
+                    Swal.showValidationMessage('La contraseña es requerida');
+                    return false;
+                }
+
+                return { apodo, contrasenha };
+            }
+        });
+
+        return formulario;
+    }
+
+    /**
+     * Elimina un usuario después de confirmar
+     */
     async eliminarUsuario(id) {
         try {
-            const result = await Swal.fire({
+            const confirmacion = await Swal.fire({
                 title: '¿Está seguro?',
                 text: "Esta acción no se puede revertir",
                 icon: 'warning',
@@ -177,41 +209,64 @@ class UsuariosManager {
                 cancelButtonText: 'Cancelar'
             });
 
-            if (result.isConfirmed) {
-                const url = this.routes.destroy.replace(':id', id);
-                const response = await axios.delete(url);
+            if (!confirmacion.isConfirmed) return;
 
-                if (response.data.success) {
-                    this.table.ajax.reload(null, false);
-                    this.showSuccess('Usuario eliminado exitosamente');
-                }
+            const respuesta = await axios.delete(
+                this.routes.destroy.replace(':id', id)
+            );
+
+            if (respuesta.data.success) {
+                this.actualizarTabla();
+                this.mostrarMensajeExito('Usuario eliminado exitosamente');
             }
         } catch (error) {
-            this.handleError(error);
+            this.manejarError(error);
         }
     }
 
-    handleError(error) {
-        const message = error.response?.data?.message || 'Ha ocurrido un error';
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: message
-        });
+    /**
+     * Actualiza la tabla sin perder la página actual
+     */
+    actualizarTabla() {
+        this.tabla.ajax.reload(null, false);
     }
 
-    handleAjaxError(xhr, error, thrown) {
-        console.error('Error en DataTable:', error);
-        this.handleError({response: {data: {message: 'Error al cargar los datos'}}});
-    }
-
-    showSuccess(message) {
+    /**
+     * Muestra un mensaje de éxito
+     */
+    mostrarMensajeExito(mensaje) {
         Swal.fire({
             icon: 'success',
             title: 'Éxito',
-            text: message,
+            text: mensaje,
             timer: 2000,
             showConfirmButton: false
+        });
+    }
+
+    /**
+     * Maneja los errores de las peticiones
+     */
+    manejarError(error) {
+        const mensaje = error.response?.data?.message || 'Ha ocurrido un error';
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: mensaje
+        });
+    }
+
+    /**
+     * Maneja los errores específicos de DataTables
+     */
+    manejarErrorAjax(xhr, error, thrown) {
+        console.error('Error en DataTable:', error);
+        this.manejarError({
+            response: {
+                data: {
+                    message: 'Error al cargar los datos'
+                }
+            }
         });
     }
 }
