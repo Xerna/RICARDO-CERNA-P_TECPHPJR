@@ -184,7 +184,7 @@ class UsuariosManager {
                    type="password" 
                    class="swal2-input" 
                    placeholder="${usuario ? 'Nueva Contraseña' : 'Contraseña'}">
-            <div class="text-danger mt-2" style="display: none;" id="password-requirements">
+            <div class="text-danger" style="display: none;margin-top: 10px;" id="password-requirements">
                 ${usuario ? 'Si ingresa una contraseña, debe tener al menos 6 caracteres' : 'La contraseña debe tener al menos 6 caracteres'}
             </div>
         `,
