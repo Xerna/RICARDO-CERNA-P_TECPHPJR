@@ -46,14 +46,14 @@ class UsuarioController extends Controller
      */
     private function getDatatableData()
     {
-        $query = Usuario::select(['id', 'apodo', 'contrasenha']);
+        $query = Usuario::select(['id', 'apodo']);
         
         return DataTables::of($query)
             ->addColumn('actions', function($usuario) {
                 return [
                     'id' => $usuario->id,
-                    'can_edit' => true,  // Aquí podrías agregar lógica de permisos
-                    'can_delete' => true // Aquí podrías agregar lógica de permisos
+                    'can_edit' => true, 
+                    'can_delete' => true 
                 ];
             })
             ->filterColumn('apodo', function($query, $keyword) {

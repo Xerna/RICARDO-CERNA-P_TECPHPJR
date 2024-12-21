@@ -4,26 +4,22 @@
 class UsuariosManager {
     /**
      * Constructor de la clase
-     * Inicializa la tabla y los eventos
      */
     constructor() {
-        // Configuración inicial
         this.routes = window.Routes.usuarios;
         this.tabla = null;
         
-        // Selectores del DOM
         this.selectores = {
             tabla: '#usuarios-table',
             botonNuevo: '#nuevo-usuario-btn'
         };
 
-        // Inicialización
         this.inicializarTabla();
         this.inicializarEventos();
     }
 
     /**
-     * Inicializa la tabla de usuarios con DataTables
+     * Inicializa la tabla de usuarios
      */
     inicializarTabla() {
         const configuracionTabla = {
@@ -37,8 +33,7 @@ class UsuariosManager {
             },
             columns: [
                 {data: 'id', name: 'id', width: '10%'},
-                {data: 'apodo', name: 'apodo', width: '35%'},
-                {data: 'contrasenha', name: 'contrasenha', width: '25%'},
+                {data: 'apodo', name: 'apodo', width: '60%'},
                 {
                     data: 'actions',
                     name: 'actions',
@@ -61,7 +56,7 @@ class UsuariosManager {
     }
 
     /**
-     * Renderiza los botones de acción para cada fila
+     * Renderiza los botones de acción
      */
     renderizarBotones(data) {
         const botones = [];
@@ -78,7 +73,7 @@ class UsuariosManager {
     }
 
     /**
-     * Crea un botón HTML con los parámetros especificados
+     * Crea un botón HTML
      */
     crearBoton(accion, id, tipo, texto) {
         return `
@@ -90,7 +85,7 @@ class UsuariosManager {
     }
 
     /**
-     * Inicializa los eventos de la tabla
+     * Inicializa los eventos
      */
     inicializarEventos() {
         $(this.selectores.botonNuevo).on('click', () => this.crearUsuario());
@@ -107,7 +102,7 @@ class UsuariosManager {
     }
 
     /**
-     * Muestra el formulario para crear un nuevo usuario
+     * Crear nuevo usuario
      */
     async crearUsuario() {
         const formulario = await this.mostrarFormulario('Nuevo Usuario');
@@ -127,7 +122,7 @@ class UsuariosManager {
     }
 
     /**
-     * Muestra el formulario para editar un usuario
+     * Editar usuario existente
      */
     async editarUsuario(id) {
         try {
@@ -153,48 +148,80 @@ class UsuariosManager {
     }
 
     /**
-     * Muestra el formulario de usuario (crear/editar)
+     * Muestra el formulario de usuario
      */
-    async mostrarFormulario(titulo, usuario = null) {
-        const { value: formulario } = await Swal.fire({
-            title: titulo,
-            html: `
-                <input id="swal-apodo" 
-                       class="swal2-input" 
-                       placeholder="Apodo" 
-                       value="${usuario?.apodo || ''}">
-                <input id="swal-contrasenha" 
-                       type="password" 
-                       class="swal2-input" 
-                       placeholder="${usuario ? 'Nueva Contraseña (opcional)' : 'Contraseña'}">
-            `,
-            focusConfirm: false,
-            showCancelButton: true,
-            confirmButtonText: usuario ? 'Actualizar' : 'Guardar',
-            cancelButtonText: 'Cancelar',
-            preConfirm: () => {
-                const apodo = document.getElementById('swal-apodo').value;
-                const contrasenha = document.getElementById('swal-contrasenha').value;
-
-                if (!apodo) {
-                    Swal.showValidationMessage('El apodo es requerido');
-                    return false;
+ /**
+     * Muestra el formulario de usuario
+     */
+ async mostrarFormulario(titulo, usuario = null) {
+    const { value: formulario } = await Swal.fire({
+        title: titulo,
+        html: `
+            <input id="swal-apodo" 
+                   class="swal2-input" 
+                   placeholder="Apodo" 
+                   value="${usuario?.apodo || ''}">
+            <input id="swal-contrasenha" 
+                   type="password" 
+                   class="swal2-input" 
+                   placeholder="${usuario ? 'Nueva Contraseña' : 'Contraseña'}">
+            <div class="text-danger mt-2" style="display: none;" id="password-requirements">
+                ${usuario ? 'Si ingresa una contraseña, debe tener al menos 6 caracteres' : 'La contraseña debe tener al menos 6 caracteres'}
+            </div>
+        `,
+        focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: usuario ? 'Actualizar' : 'Guardar',
+        cancelButtonText: 'Cancelar',
+        didOpen: () => {
+            // Agregar validación en tiempo real para la contraseña
+            const passwordInput = document.getElementById('swal-contrasenha');
+            const requirements = document.getElementById('password-requirements');
+            
+            passwordInput.addEventListener('input', function() {
+                if (this.value.length > 0 && this.value.length < 6) {
+                    requirements.style.display = 'block';
+                } else {
+                    requirements.style.display = 'none';
                 }
+            });
+        },
+        preConfirm: () => {
+            const apodo = document.getElementById('swal-apodo').value;
+            const contrasenha = document.getElementById('swal-contrasenha').value;
 
-                if (!usuario && !contrasenha) {
-                    Swal.showValidationMessage('La contraseña es requerida');
-                    return false;
-                }
-
-                return { apodo, contrasenha };
+            if (!apodo) {
+                Swal.showValidationMessage('El apodo es requerido');
+                return false;
             }
-        });
 
-        return formulario;
-    }
+            if (!usuario && !contrasenha) {
+                Swal.showValidationMessage('La contraseña es requerida para nuevos usuarios');
+                return false;
+            }
+
+            // En edición, si se envía la contraseña, no puede estar vacía
+            if (contrasenha === '') {
+                Swal.showValidationMessage('La contraseña no puede estar vacía');
+                return false;
+            }
+
+            // Validar longitud mínima si hay contraseña
+            if (contrasenha && contrasenha.length < 6) {
+                Swal.showValidationMessage('La contraseña debe tener al menos 6 caracteres');
+                return false;
+            }
+
+            return { apodo, contrasenha };
+        }
+    });
+
+    return formulario;
+}
+
 
     /**
-     * Elimina un usuario después de confirmar
+     * Eliminar usuario
      */
     async eliminarUsuario(id) {
         try {
@@ -225,14 +252,14 @@ class UsuariosManager {
     }
 
     /**
-     * Actualiza la tabla sin perder la página actual
+     * Actualiza la tabla
      */
     actualizarTabla() {
         this.tabla.ajax.reload(null, false);
     }
 
     /**
-     * Muestra un mensaje de éxito
+     * Muestra mensaje de éxito
      */
     mostrarMensajeExito(mensaje) {
         Swal.fire({
@@ -245,10 +272,22 @@ class UsuariosManager {
     }
 
     /**
-     * Maneja los errores de las peticiones
+     * Maneja errores generales
      */
     manejarError(error) {
-        const mensaje = error.response?.data?.message || 'Ha ocurrido un error';
+        let mensaje = 'Ha ocurrido un error';
+        
+        if (error.response?.data?.message) {
+            // Si el mensaje es un objeto (errores de validación de Laravel)
+            if (typeof error.response.data.message === 'object') {
+                mensaje = Object.values(error.response.data.message)
+                    .flat()
+                    .join('\n');
+            } else {
+                mensaje = error.response.data.message;
+            }
+        }
+
         Swal.fire({
             icon: 'error',
             title: 'Error',
@@ -257,7 +296,7 @@ class UsuariosManager {
     }
 
     /**
-     * Maneja los errores específicos de DataTables
+     * Maneja errores de DataTables
      */
     manejarErrorAjax(xhr, error, thrown) {
         console.error('Error en DataTable:', error);

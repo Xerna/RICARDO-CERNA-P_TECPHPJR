@@ -15,7 +15,7 @@
                 <tr>
                     <th>ID</th>
                     <th>Apodo</th>
-                    <th>Contraseña</th>
+
                     <th>Acciones</th>
                 </tr>
             </thead>
